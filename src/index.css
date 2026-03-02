@@ -1,0 +1,43 @@
+:root {
+  font-family: 'Manrope', 'Segoe UI', Tahoma, sans-serif;
+  line-height: 1.4;
+  font-weight: 500;
+  color: #1f2937;
+  background: radial-gradient(circle at 20% 20%, #f1f8ff, #f4f5f8 42%, #edf1f7 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid #dce1e7;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.93rem;
+  font-weight: 700;
+  font-family: inherit;
+  background-color: #f8f9fa;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
