@@ -9,16 +9,42 @@ const CLASSIFICATION_COLORS = {
   blunder: 'rgba(202, 52, 49, 0.55)',
 }
 
+const BADGE_CONFIGS = {
+  best:       { bg: '#96bc4b', icon: '★', textColor: '#fff' },
+  good:       { bg: '#96bc4b', icon: '!',  textColor: '#fff' },
+  inaccuracy: { bg: '#f7c631', icon: '?!', textColor: '#000' },
+  mistake:    { bg: '#e68a2a', icon: '?',  textColor: '#fff' },
+  blunder:    { bg: '#ca3431', icon: '??', textColor: '#fff' },
+}
+
+// Generate an SVG data URL for a classification badge
+function makeBadgeSvg(classKey) {
+  const config = BADGE_CONFIGS[classKey]
+  if (!config) return null
+  const size = 26
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${size/2}" cy="${size/2}" r="${size/2}" fill="${config.bg}"/>
+    <text x="${size/2}" y="${size/2 + 1}" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="${config.icon.length > 1 ? 10 : 14}" font-weight="bold" fill="${config.textColor}">${config.icon}</text>
+  </svg>`
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
+}
+
+// Pre-generate all badge SVGs
+const BADGE_SVGS = {}
+Object.keys(BADGE_CONFIGS).forEach(key => {
+  BADGE_SVGS[key] = makeBadgeSvg(key)
+})
+
 const LAST_MOVE_COLOR = 'rgba(255, 255, 50, 0.42)'
 const SELECTED_COLOR = 'rgba(255, 255, 50, 0.55)'
 
-// Creates a radial dot style for empty squares (legal move indicator)
+// Legal move dot for empty squares
 const LEGAL_MOVE_DOT = {
   background: 'radial-gradient(circle, rgba(0,0,0,0.25) 24%, transparent 25%)',
   borderRadius: '50%',
 }
 
-// Creates a ring style for occupied squares (capturable piece indicator)
+// Capture ring for occupied squares
 const LEGAL_CAPTURE_RING = {
   background: 'radial-gradient(circle, transparent 55%, rgba(0,0,0,0.25) 56%, rgba(0,0,0,0.25) 70%, transparent 71%)',
 }
@@ -33,7 +59,7 @@ export function ChessBoardWrapper({
   lastMove = null,
   classification = '',
   selectedSquare = '',
-  legalMoves = [],       // array of { to, captured } objects
+  legalMoves = [],
 }) {
   const squareStyles = useMemo(() => {
     const styles = {}
@@ -46,8 +72,19 @@ export function ChessBoardWrapper({
       if (lastMove.to) {
         const classKey = classification?.toLowerCase() || ''
         const classColor = CLASSIFICATION_COLORS[classKey]
+        const badgeSvg = BADGE_SVGS[classKey]
+
         styles[lastMove.to] = {
           backgroundColor: classColor || LAST_MOVE_COLOR,
+          position: 'relative',
+        }
+
+        // Add classification badge as background image positioned at top-right
+        if (badgeSvg) {
+          styles[lastMove.to].backgroundImage = `url("${badgeSvg}")`
+          styles[lastMove.to].backgroundRepeat = 'no-repeat'
+          styles[lastMove.to].backgroundPosition = 'top 2px right 2px'
+          styles[lastMove.to].backgroundSize = '26px 26px'
         }
       }
     }
@@ -64,10 +101,8 @@ export function ChessBoardWrapper({
     legalMoves.forEach((move) => {
       const sq = move.to
       if (move.captured) {
-        // Capture ring for squares with opponent pieces
         styles[sq] = { ...(styles[sq] || {}), ...LEGAL_CAPTURE_RING }
       } else {
-        // Dot for empty squares
         styles[sq] = { ...(styles[sq] || {}), ...LEGAL_MOVE_DOT }
       }
     })
@@ -95,7 +130,6 @@ export function ChessBoardWrapper({
     if (onPieceDrag) onPieceDrag(square)
   }
 
-  // react-chessboard v5 uses a SINGLE `options` prop
   const options = {
     id: 'analysis-board',
     position,
