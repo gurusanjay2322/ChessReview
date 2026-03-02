@@ -153,23 +153,23 @@ export function EvalGraph({ analysisByPly, totalMoves, currentPly, onClickPly, m
         preserveAspectRatio="none"
         className="eval-graph-svg"
       >
-        {/* Background halves */}
+        {}
         <rect x="0" y="0" width={width} height={height / 2} fill="#111119" />
         <rect x="0" y={height / 2} width={width} height={height / 2} fill="#d8d8d0" />
 
-        {/* White area */}
+        {}
         <clipPath id="whiteClip">
           <rect x="0" y="0" width={width} height={height / 2} />
         </clipPath>
         <path d={whitePath} fill="#d8d8d0" clipPath="url(#whiteClip)" />
 
-        {/* Black area */}
+        {}
         <clipPath id="blackClip">
           <rect x="0" y={height / 2} width={width} height={height / 2} />
         </clipPath>
         <path d={blackPath} fill="#111119" clipPath="url(#blackClip)" />
 
-        {/* Eval curve outline */}
+        {}
         {points.length > 1 && (
           <polyline
             points={points.map(p => `${p.x},${p.yWhite}`).join(' ')}
@@ -179,7 +179,7 @@ export function EvalGraph({ analysisByPly, totalMoves, currentPly, onClickPly, m
           />
         )}
 
-        {/* Current position marker */}
+        {}
         {currentPly > 0 && (
           <line
             x1={currentX} y1={0} x2={currentX} y2={height}
@@ -188,7 +188,7 @@ export function EvalGraph({ analysisByPly, totalMoves, currentPly, onClickPly, m
           />
         )}
 
-        {/* Hover marker */}
+        {}
         {hoverInfo && (
           <line
             x1={hoverInfo.svgX} y1={0} x2={hoverInfo.svgX} y2={height}
@@ -199,7 +199,7 @@ export function EvalGraph({ analysisByPly, totalMoves, currentPly, onClickPly, m
         )}
       </svg>
 
-      {/* Tooltip */}
+      {}
       {hoverInfo && (
         <div
           className="eval-graph-tooltip"

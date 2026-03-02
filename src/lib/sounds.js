@@ -1,4 +1,4 @@
-// Chess move sounds using Lichess open-source audio (CC-licensed)
+
 const LICHESS_SOUND_BASE = 'https://raw.githubusercontent.com/lichess-org/lila/master/public/sound/standard'
 
 const SOUND_URLS = {
@@ -35,8 +35,7 @@ export function playSound(type = 'move') {
         const audio = getAudio(type)
         audio.currentTime = 0
         audio.play().catch(() => { })
-    } catch {
-        // Silently fail
+    } catch {
     }
 }
 

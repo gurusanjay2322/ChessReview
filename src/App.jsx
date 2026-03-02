@@ -47,7 +47,6 @@ function annotationForClassification(classification) {
   return map[classification] || ''
 }
 
-// Convert UCI move (e.g. "e2e4") to SAN using chess.js from a given FEN
 function uciToSan(fen, uciMove) {
   if (!uciMove || uciMove === '-' || uciMove === '(none)') return ''
   try {
@@ -58,7 +57,7 @@ function uciToSan(fen, uciMove) {
     const move = chess.move({ from, to, promotion })
     return move ? move.san : uciMove
   } catch {
-    // If current turn doesn't match, try flipping turn
+
     try {
       const fenParts = fen.split(' ')
       fenParts[1] = fenParts[1] === 'w' ? 'b' : 'w'
@@ -87,7 +86,6 @@ function commentForMove(san, classification, ply) {
   }
   return comments[classification] || `${san} played.`
 }
-
 
 function App() {
   const initialFen = useMemo(() => new Chess().fen(), [])
@@ -123,7 +121,6 @@ function App() {
   const currentClassification = activeAnalysis?.classification ?? ''
   const currentComment = commentsByPly[currentPly - 1] ?? ''
 
-  // When previewing best move, override what the board shows
   const displayMove = previewMove || currentMove
   const displayClassification = previewMove ? 'Best' : currentClassification
 
@@ -152,7 +149,6 @@ function App() {
     }
   }, [])
 
-  // Auto-scroll move list to active move
   useEffect(() => {
     if (moveListRef.current) {
       const activeEl = moveListRef.current.querySelector('.move-btn.active')
@@ -162,7 +158,6 @@ function App() {
     }
   }, [currentPly])
 
-  // Update eval when analysis data changes
   useEffect(() => {
     if (activeAnalysis) {
       setCurrentEvalCp(activeAnalysis.playedScoreCp ?? 0)
@@ -281,7 +276,6 @@ function App() {
     setPlyPosition(ply, game)
   }
 
-  // Execute a move from sourceSquare to targetSquare
   const executeMove = useCallback((sourceSquare, targetSquare) => {
     stopPlayback()
     let chess = new Chess(boardPosition)
@@ -297,7 +291,7 @@ function App() {
             const forced = new Chess(fenFields.join(' '))
             const forcedMove = forced.move({ from: sourceSquare, to: targetSquare, promotion: 'q' })
             if (forcedMove) { chess = forced; move = forcedMove }
-          } catch { /* ignore */ }
+          } catch {  }
         }
       }
     }
@@ -320,7 +314,6 @@ function App() {
     return true
   }, [boardPosition, game, currentPly, initialFen, stopPlayback, setPlyPosition])
 
-  // Get legal moves for a given square from current board position
   const getLegalMovesForSquare = useCallback((square) => {
     try {
       const chess = new Chess(boardPosition)
@@ -334,7 +327,7 @@ function App() {
             try {
               const forcedChess = new Chess(fenFields.join(' '))
               moves = forcedChess.moves({ square, verbose: true })
-            } catch { /* ignore */ }
+            } catch {  }
           }
         }
       }
@@ -344,7 +337,6 @@ function App() {
     }
   }, [boardPosition])
 
-  // Select a square and show legal moves
   const selectSquare = useCallback((square) => {
     const moves = getLegalMovesForSquare(square)
     if (moves.length > 0) {
@@ -356,7 +348,6 @@ function App() {
     }
   }, [getLegalMovesForSquare])
 
-  // Handle clicking on a piece
   const handlePieceClick = useCallback((square) => {
     if (selectedSquare === square) {
       setSelectedSquare('')
@@ -373,7 +364,6 @@ function App() {
     selectSquare(square)
   }, [selectedSquare, legalMoves, executeMove, selectSquare])
 
-  // Handle clicking on an empty square
   const handleSquareClick = useCallback((square) => {
     if (!selectedSquare) return
     const isLegalTarget = legalMoves.some(m => m.to === square)
@@ -385,12 +375,10 @@ function App() {
     }
   }, [selectedSquare, legalMoves, executeMove])
 
-  // Handle piece drag start — show legal moves
   const handlePieceDrag = useCallback((square) => {
     selectSquare(square)
   }, [selectSquare])
 
-  // Wrapper for react-chessboard's onPieceDrop
   const onPieceDrop = useCallback((sourceSquare, targetSquare) => {
     return executeMove(sourceSquare, targetSquare)
   }, [executeMove])
@@ -440,7 +428,7 @@ function App() {
           result = analyzeMoveHeuristic(positionFen, playedMove)
           result.bestMoveSan = uciToSan(positionFen, result.bestMove)
         }
-        // Generate chess-specific explanation
+
         result.explanation = generateChessExplanation(positionFen, playedMove, result)
         next[i] = result
         nextComments[i] = commentForMove(playedMove.san, result.classification, i + 1)
@@ -516,7 +504,6 @@ function App() {
     setBoardOrientation(prev => prev === 'white' ? 'black' : 'white')
   }
 
-  // Keyboard navigation
   useEffect(() => {
     const handler = (e) => {
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return
@@ -533,7 +520,6 @@ function App() {
   const blackPlayer = game?.headers?.Black ?? 'Black'
   const result = game?.headers?.Result ?? ''
 
-  // Compute accuracy stats
   const stats = useMemo(() => {
     if (!game || Object.keys(analysisByPly).length === 0) return null
     let wBest = 0, wGood = 0, wInac = 0, wMis = 0, wBlun = 0, wTotal = 0
@@ -562,8 +548,9 @@ function App() {
   }, [game, analysisByPly])
 
   return (
+    <>
     <main className="app-shell">
-      {/* Header */}
+
       <header className="app-header">
         <div className="logo">
           <span className="logo-icon">♔</span>
@@ -571,16 +558,15 @@ function App() {
         </div>
         <div className="header-actions">
           <button className="icon-btn" onClick={toggleSound} title={soundOn ? 'Mute' : 'Unmute'}>
-            {soundOn ? '🔊' : '🔇'}
+            {soundOn ? '♫' : '♪'}
           </button>
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="main-content">
-        {/* Board Area */}
+
         <div className="board-area">
-          {/* Player bar - opponent */}
+
           <div className="player-bar top">
             <div className="player-avatar black-avatar">♚</div>
             <div className="player-info">
@@ -605,7 +591,6 @@ function App() {
             />
           </div>
 
-          {/* Player bar - player */}
           <div className="player-bar bottom">
             <div className="player-avatar white-avatar">♔</div>
             <div className="player-info">
@@ -613,7 +598,6 @@ function App() {
             </div>
           </div>
 
-          {/* Eval Graph */}
           <EvalGraph
             analysisByPly={analysisByPly}
             totalMoves={game?.moves?.length ?? 0}
@@ -622,7 +606,6 @@ function App() {
             moves={game?.moves ?? []}
           />
 
-          {/* Board Controls */}
           <div className="board-controls">
             <button className="ctrl-btn" onClick={flipBoard} title="Flip board">↕</button>
             <div className="nav-controls">
@@ -640,9 +623,8 @@ function App() {
           </div>
         </div>
 
-        {/* Right Panel */}
         <div className="right-panel">
-          {/* Tab Bar */}
+
           <div className="tab-bar">
             <button className={`tab ${activeTab === 'moves' ? 'active' : ''}`} onClick={() => setActiveTab('moves')}>
               Moves
@@ -655,11 +637,10 @@ function App() {
             </button>
           </div>
 
-          {/* Tab Content */}
           <div className="tab-content">
             {activeTab === 'moves' && (
               <div className="moves-tab">
-                {/* Analysis Button & Status */}
+
                 <div className="analysis-section">
                   <button
                     className="analyze-btn"
@@ -672,7 +653,7 @@ function App() {
                         Analyzing...
                       </>
                     ) : (
-                      <>🔍 Analyze Game</>
+                      <><span className="icon-search" /> Analyze Game</>
                     )}
                   </button>
                   {isAnalyzing && (
@@ -685,15 +666,16 @@ function App() {
                   )}
                 </div>
 
-                {/* Coach Comment */}
                 {currentComment && (
                   <div className={`coach-card ${currentClassification.toLowerCase()}`}>
                     <span className="coach-icon">
-                      {currentClassification === 'Best' ? '✅' :
-                       currentClassification === 'Good' ? '👍' :
-                       currentClassification === 'Inaccuracy' ? '⚠️' :
-                       currentClassification === 'Mistake' ? '❌' :
-                       currentClassification === 'Blunder' ? '💥' : '💡'}
+                      <span className={`class-icon ${currentClassification.toLowerCase()}`}>
+                        {currentClassification === 'Best' ? '★' :
+                         currentClassification === 'Good' ? '✓' :
+                         currentClassification === 'Inaccuracy' ? '?!' :
+                         currentClassification === 'Mistake' ? '?' :
+                         currentClassification === 'Blunder' ? '??' : '•'}
+                      </span>
                     </span>
                     <div className="coach-content">
                       <span className={`coach-classification ${currentClassification.toLowerCase()}`}>
@@ -704,17 +686,15 @@ function App() {
                   </div>
                 )}
 
-                {/* Explanation + Best Move */}
                 {activeAnalysis && activeAnalysis.classification !== 'Best' && activeAnalysis.classification !== 'Good' && (
                   <div className="explanation-card">
-                    {/* Explanation */}
+
                     {activeAnalysis.explanation && (
                       <div className="explanation-text">
                         {activeAnalysis.explanation}
                       </div>
                     )}
 
-                    {/* Best Move Suggestion */}
                     {activeAnalysis.bestMoveSan && activeAnalysis.bestMove !== '-' && (
                       <div className="best-move-section">
                         <span className="best-move-label">Best was</span>
@@ -743,7 +723,7 @@ function App() {
                                 setPreviewMove({ from, to })
                                 playSoundForSan(move.san)
                               }
-                            } catch { /* ignore */ }
+                            } catch {  }
                           }}
                           title="Click to play the best move"
                         >
@@ -755,7 +735,6 @@ function App() {
                       </div>
                     )}
 
-                    {/* Eval comparison */}
                     <div className="eval-comparison">
                       <div className="eval-compare-item played">
                         <span className="ec-label">Played</span>
@@ -770,7 +749,6 @@ function App() {
                   </div>
                 )}
 
-                {/* Accuracy Stats */}
                 {stats && (
                   <div className="stats-card">
                     <h3>Accuracy Summary</h3>
@@ -815,7 +793,6 @@ function App() {
                   </div>
                 )}
 
-                {/* Move List */}
                 <div className="move-list-container" ref={moveListRef}>
                   {moveRows.length ? (
                     <div className="move-list">
@@ -852,7 +829,6 @@ function App() {
                   )}
                 </div>
 
-                {/* Game Metadata */}
                 {game && (
                   <div className="metadata-section">
                     {DEFAULT_HEADERS.map(h => (
@@ -941,6 +917,15 @@ function App() {
         </div>
       </div>
     </main>
+    <footer className="app-footer">
+      <span className="footer-text">Built with ♟ by</span>
+      <a href="https://iamgs.vercel.app" target="_blank" rel="noopener noreferrer" className="footer-link">RKGS</a>
+      <span className="footer-sep">·</span>
+      <a href="https://buymeacoffee.com/rkgs" target="_blank" rel="noopener noreferrer" className="footer-link coffee-link">
+        <span className="coffee-icon">☕</span> Buy me a coffee
+      </a>
+    </footer>
+    </>
   )
 }
 

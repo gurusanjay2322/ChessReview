@@ -131,7 +131,7 @@ export function ChessBoardWrapper({
     boardStyle: {
       borderRadius: '4px',
     },
-    /* Unique board colors — dark slate blue + warm cream */
+    
     darkSquareStyle: { backgroundColor: '#4a7c72' },
     lightSquareStyle: { backgroundColor: '#e8dcc8' },
     squareStyles,

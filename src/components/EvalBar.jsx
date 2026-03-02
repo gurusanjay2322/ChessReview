@@ -17,8 +17,7 @@ export function EvalBar({ scoreCp = 0, flipped = false }) {
     if (scoreCp == null) return 50
     if (Math.abs(scoreCp) >= MATE_SCORE - 50) {
       return scoreCp > 0 ? 98 : 2
-    }
-    // Sigmoid-like mapping: ±500cp → ~10%/90%
+    }
     const clamped = Math.max(-800, Math.min(800, scoreCp))
     return 50 + (clamped / 800) * 45
   }, [scoreCp])
