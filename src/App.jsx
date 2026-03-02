@@ -8,6 +8,7 @@ import {
   toUciMove,
 } from './lib/chessReview'
 import { StockfishClient } from './lib/stockfishClient'
+import { generateChessExplanation } from './lib/moveExplanation'
 import {
   fetchChessComRecentGames,
   fetchLichessRecentGames,
@@ -46,6 +47,33 @@ function annotationForClassification(classification) {
   return map[classification] || ''
 }
 
+// Convert UCI move (e.g. "e2e4") to SAN using chess.js from a given FEN
+function uciToSan(fen, uciMove) {
+  if (!uciMove || uciMove === '-' || uciMove === '(none)') return ''
+  try {
+    const chess = new Chess(fen)
+    const from = uciMove.substring(0, 2)
+    const to = uciMove.substring(2, 4)
+    const promotion = uciMove.length > 4 ? uciMove[4] : undefined
+    const move = chess.move({ from, to, promotion })
+    return move ? move.san : uciMove
+  } catch {
+    // If current turn doesn't match, try flipping turn
+    try {
+      const fenParts = fen.split(' ')
+      fenParts[1] = fenParts[1] === 'w' ? 'b' : 'w'
+      const chess = new Chess(fenParts.join(' '))
+      const from = uciMove.substring(0, 2)
+      const to = uciMove.substring(2, 4)
+      const promotion = uciMove.length > 4 ? uciMove[4] : undefined
+      const move = chess.move({ from, to, promotion })
+      return move ? move.san : uciMove
+    } catch {
+      return uciMove
+    }
+  }
+}
+
 function commentForMove(san, classification, ply) {
   if ((classification === 'Best' || classification === 'Good') && ply <= 12) {
     return `${san} is theory.`
@@ -59,6 +87,7 @@ function commentForMove(san, classification, ply) {
   }
   return comments[classification] || `${san} played.`
 }
+
 
 function App() {
   const initialFen = useMemo(() => new Chess().fen(), [])
@@ -84,6 +113,7 @@ function App() {
   const [currentEvalCp, setCurrentEvalCp] = useState(0)
   const [selectedSquare, setSelectedSquare] = useState('')
   const [legalMoves, setLegalMoves] = useState([])
+  const [previewMove, setPreviewMove] = useState(null)  // { from, to } for best-move preview
   const playbackRef = useRef(null)
   const currentPlyRef = useRef(0)
   const moveListRef = useRef(null)
@@ -92,6 +122,10 @@ function App() {
   const currentMove = currentPly > 0 ? game?.moves?.[currentPly - 1] ?? null : null
   const currentClassification = activeAnalysis?.classification ?? ''
   const currentComment = commentsByPly[currentPly - 1] ?? ''
+
+  // When previewing best move, override what the board shows
+  const displayMove = previewMove || currentMove
+  const displayClassification = previewMove ? 'Best' : currentClassification
 
   const moveRows = useMemo(() => {
     if (!game) return []
@@ -159,6 +193,7 @@ function App() {
     setCurrentPly(clamped)
     setBoardPosition(nextFen)
     currentPlyRef.current = clamped
+    setPreviewMove(null)
 
     if (clamped > previousPly && clamped > 0) {
       const san = g.moves[clamped - 1]?.san ?? ''
@@ -391,9 +426,11 @@ function App() {
           const best = await evaluator.getBestMoveAndScore(positionFen, 13)
           const played = await evaluator.getScoreAfterMove(positionFen, toUciMove(playedMove), 13)
           const cpLoss = Math.max(0, best.scoreCp - played.scoreCp)
+          const bestMoveSan = uciToSan(positionFen, best.bestMove)
           result = {
             cpLoss,
             bestMove: best.bestMove,
+            bestMoveSan,
             bestScoreCp: best.scoreCp,
             playedScoreCp: played.scoreCp,
             classification: classifyMoveByCentipawnLoss(cpLoss),
@@ -401,7 +438,10 @@ function App() {
           }
         } else {
           result = analyzeMoveHeuristic(positionFen, playedMove)
+          result.bestMoveSan = uciToSan(positionFen, result.bestMove)
         }
+        // Generate chess-specific explanation
+        result.explanation = generateChessExplanation(positionFen, playedMove, result)
         next[i] = result
         nextComments[i] = commentForMove(playedMove.san, result.classification, i + 1)
         setAnalysisByPly({ ...next })
@@ -558,8 +598,8 @@ function App() {
               onPieceClick={handlePieceClick}
               onPieceDrag={handlePieceDrag}
               boardOrientation={boardOrientation}
-              lastMove={currentMove}
-              classification={currentClassification}
+              lastMove={displayMove}
+              classification={displayClassification}
               selectedSquare={selectedSquare}
               legalMoves={legalMoves}
             />
@@ -579,6 +619,7 @@ function App() {
             totalMoves={game?.moves?.length ?? 0}
             currentPly={currentPly}
             onClickPly={jumpTo}
+            moves={game?.moves ?? []}
           />
 
           {/* Board Controls */}
@@ -647,35 +688,84 @@ function App() {
                 {/* Coach Comment */}
                 {currentComment && (
                   <div className={`coach-card ${currentClassification.toLowerCase()}`}>
-                    <span className="coach-icon">💡</span>
-                    <span className="coach-text">{currentComment}</span>
+                    <span className="coach-icon">
+                      {currentClassification === 'Best' ? '✅' :
+                       currentClassification === 'Good' ? '👍' :
+                       currentClassification === 'Inaccuracy' ? '⚠️' :
+                       currentClassification === 'Mistake' ? '❌' :
+                       currentClassification === 'Blunder' ? '💥' : '💡'}
+                    </span>
+                    <div className="coach-content">
+                      <span className={`coach-classification ${currentClassification.toLowerCase()}`}>
+                        {currentClassification} {annotationForClassification(currentClassification)}
+                      </span>
+                      <span className="coach-text">{currentComment}</span>
+                    </div>
                   </div>
                 )}
 
-                {/* Position Insight */}
-                {activeAnalysis && (
-                  <div className="insight-card">
-                    <div className="insight-row">
-                      <span className="insight-label">Classification</span>
-                      <span className={`insight-value classification-badge ${currentClassification.toLowerCase()}`}>
-                        {currentClassification} {annotationForClassification(currentClassification)}
-                      </span>
-                    </div>
-                    <div className="insight-row">
-                      <span className="insight-label">CP Loss</span>
-                      <span className="insight-value">{Math.round(activeAnalysis.cpLoss)}</span>
-                    </div>
-                    <div className="insight-row">
-                      <span className="insight-label">Best Move</span>
-                      <span className="insight-value mono">{activeAnalysis.bestMove}</span>
-                    </div>
-                    <div className="insight-row">
-                      <span className="insight-label">Eval (Played)</span>
-                      <span className="insight-value mono">{formatScore(activeAnalysis.playedScoreCp)}</span>
-                    </div>
-                    <div className="insight-row">
-                      <span className="insight-label">Eval (Best)</span>
-                      <span className="insight-value mono">{formatScore(activeAnalysis.bestScoreCp)}</span>
+                {/* Explanation + Best Move */}
+                {activeAnalysis && activeAnalysis.classification !== 'Best' && activeAnalysis.classification !== 'Good' && (
+                  <div className="explanation-card">
+                    {/* Explanation */}
+                    {activeAnalysis.explanation && (
+                      <div className="explanation-text">
+                        {activeAnalysis.explanation}
+                      </div>
+                    )}
+
+                    {/* Best Move Suggestion */}
+                    {activeAnalysis.bestMoveSan && activeAnalysis.bestMove !== '-' && (
+                      <div className="best-move-section">
+                        <span className="best-move-label">Best was</span>
+                        <button
+                          className="best-move-btn"
+                          onClick={() => {
+                            if (!game || currentPly <= 0) return
+                            const plyIdx = currentPly - 1
+                            const positionFen = game.fens[plyIdx]
+                            const uci = activeAnalysis.bestMove
+                            if (!uci || uci === '-') return
+                            const from = uci.substring(0, 2)
+                            const to = uci.substring(2, 4)
+                            const promotion = uci.length > 4 ? uci[4] : undefined
+                            try {
+                              let chess = new Chess(positionFen)
+                              let move = chess.move({ from, to, promotion: promotion || 'q' })
+                              if (!move) {
+                                const fenParts = positionFen.split(' ')
+                                fenParts[1] = fenParts[1] === 'w' ? 'b' : 'w'
+                                chess = new Chess(fenParts.join(' '))
+                                move = chess.move({ from, to, promotion: promotion || 'q' })
+                              }
+                              if (move) {
+                                setBoardPosition(chess.fen())
+                                setPreviewMove({ from, to })
+                                playSoundForSan(move.san)
+                              }
+                            } catch { /* ignore */ }
+                          }}
+                          title="Click to play the best move"
+                        >
+                          {activeAnalysis.bestMoveSan}
+                        </button>
+                        <span className="best-move-eval">
+                          {formatScore(activeAnalysis.bestScoreCp)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Eval comparison */}
+                    <div className="eval-comparison">
+                      <div className="eval-compare-item played">
+                        <span className="ec-label">Played</span>
+                        <span className="ec-value">{formatScore(activeAnalysis.playedScoreCp)}</span>
+                        <span className="ec-loss">−{Math.round(activeAnalysis.cpLoss)} cp</span>
+                      </div>
+                      <div className="eval-compare-item best">
+                        <span className="ec-label">Best</span>
+                        <span className="ec-value">{formatScore(activeAnalysis.bestScoreCp)}</span>
+                      </div>
                     </div>
                   </div>
                 )}
