@@ -140,6 +140,14 @@
   font-weight: 600;
 }
 
+.player-accuracy {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
 /* Board + Eval */
 .board-with-eval {
   display: flex;

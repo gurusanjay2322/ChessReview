@@ -544,7 +544,16 @@ function App() {
         else if (c === 'Blunder') bBlun++
       }
     })
-    return { wBest, wGood, wInac, wMis, wBlun, wTotal, bBest, bGood, bInac, bMis, bBlun, bTotal }
+    const wScore = wBest * 1 + wGood * 0.8 + wInac * 0.5 + wMis * 0.2 + wBlun * 0
+    const bScore = bBest * 1 + bGood * 0.8 + bInac * 0.5 + bMis * 0.2 + bBlun * 0
+    
+    const wAccuracy = wTotal > 0 ? Math.round((wScore / wTotal) * 100) : null
+    const bAccuracy = bTotal > 0 ? Math.round((bScore / bTotal) * 100) : null
+
+    return { 
+      wBest, wGood, wInac, wMis, wBlun, wTotal, wAccuracy, 
+      bBest, bGood, bInac, bMis, bBlun, bTotal, bAccuracy 
+    }
   }, [game, analysisByPly])
 
   return (
@@ -571,6 +580,11 @@ function App() {
             <div className="player-avatar black-avatar">♚</div>
             <div className="player-info">
               <span className="player-name">{boardOrientation === 'white' ? blackPlayer : whitePlayer}</span>
+              {(boardOrientation === 'white' ? stats?.bAccuracy : stats?.wAccuracy) != null && (
+                <span className="player-accuracy">
+                  {boardOrientation === 'white' ? stats.bAccuracy : stats.wAccuracy}% Accuracy
+                </span>
+              )}
               {result && <span className="player-result">{result}</span>}
             </div>
           </div>
@@ -595,6 +609,11 @@ function App() {
             <div className="player-avatar white-avatar">♔</div>
             <div className="player-info">
               <span className="player-name">{boardOrientation === 'white' ? whitePlayer : blackPlayer}</span>
+              {(boardOrientation === 'white' ? stats?.wAccuracy : stats?.bAccuracy) != null && (
+                <span className="player-accuracy">
+                  {boardOrientation === 'white' ? stats.wAccuracy : stats.bAccuracy}% Accuracy
+                </span>
+              )}
             </div>
           </div>
 
