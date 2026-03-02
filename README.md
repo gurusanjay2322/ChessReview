@@ -5,6 +5,9 @@ Free PGN review MVP inspired by Chess.com game review.
 ## Implemented
 
 - PGN import by paste or `.pgn` upload
+- API import by username:
+  - Chess.com (latest archive games)
+  - Lichess (recent public games)
 - Interactive board with move navigation
 - Parsed game metadata (Event, players, result, date, site)
 - Move-by-move classification (`Best`, `Good`, `Inaccuracy`, `Mistake`, `Blunder`)
@@ -37,5 +40,4 @@ To use real engine analysis:
 - Eval graph per ply
 - Accuracy score
 - Critical position detection
-- Lichess/Chess.com fetch integration
 - Backend analysis queue for deeper/multi-game review

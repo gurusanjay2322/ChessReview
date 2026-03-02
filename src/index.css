@@ -1,9 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 :root {
-  font-family: 'Manrope', 'Segoe UI', Tahoma, sans-serif;
-  line-height: 1.4;
-  font-weight: 500;
-  color: #1f2937;
-  background: radial-gradient(circle at 20% 20%, #f1f8ff, #f4f5f8 42%, #edf1f7 100%);
+  --bg-primary: #262421;
+  --bg-secondary: #302e2b;
+  --bg-tertiary: #3d3a38;
+  --bg-hover: #4d4a48;
+  --text-primary: #e0ddd5;
+  --text-secondary: #9e9b93;
+  --text-dim: #7b7874;
+  --border-color: #3d3a38;
+  --accent-green: #81b64c;
+  --accent-green-hover: #96cc5c;
+  --best-color: #96bc4b;
+  --good-color: #97af49;
+  --inaccuracy-color: #f7c631;
+  --mistake-color: #e68a2a;
+  --blunder-color: #ca3431;
+  --white-piece: #ffffff;
+  --black-piece: #1a1a1a;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-primary);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -17,27 +35,41 @@
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
 }
 
-h1,
-h2,
-p {
+h1, h2, h3, p {
   margin: 0;
 }
 
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
+
 button {
-  border-radius: 8px;
-  border: 1px solid #dce1e7;
-  padding: 0.55rem 0.9rem;
-  font-size: 0.93rem;
-  font-weight: 700;
   font-family: inherit;
-  background-color: #f8f9fa;
-  color: #1f2937;
   cursor: pointer;
+  border: none;
+  outline: none;
 }
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.65;
+  opacity: 0.5;
+}
+
+input, textarea {
+  font-family: inherit;
+  outline: none;
 }
