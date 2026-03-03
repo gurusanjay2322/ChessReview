@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
 import { Chess } from 'chess.js'
 import './App.css'
 import {
@@ -16,6 +17,8 @@ import {
 import { ChessBoardWrapper } from './components/ChessBoardWrapper'
 import { EvalBar } from './components/EvalBar'
 import { EvalGraph } from './components/EvalGraph'
+import { GamePhaseAnalysis } from './components/GamePhaseAnalysis'
+import { BoardBuilder } from './components/BoardBuilder'
 import { playSoundForSan, setSoundEnabled, isSoundEnabled } from './lib/sounds'
 
 const SAMPLE_PGN = `[Event "Casual Game"]
@@ -93,13 +96,20 @@ function commentForMove(san, classification, ply) {
   return comments[classification] || `${san} played.`
 }
 
-function App() {
+function Analyzer() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  
   const initialFen = useMemo(() => new Chess().fen(), [])
+  
+  // Try to grab FEN from state if we came from the builder
+  const startingFen = location.state?.fromBuilderFen || initialFen
+  
   const [pgnText, setPgnText] = useState(SAMPLE_PGN)
   const [error, setError] = useState('')
   const [game, setGame] = useState(null)
   const [currentPly, setCurrentPly] = useState(0)
-  const [boardPosition, setBoardPosition] = useState(initialFen)
+  const [boardPosition, setBoardPosition] = useState(startingFen)
   const [analysisByPly, setAnalysisByPly] = useState({})
   const [commentsByPly, setCommentsByPly] = useState({})
   const [analysisStatus, setAnalysisStatus] = useState('Not analyzed')
@@ -129,6 +139,31 @@ function App() {
 
   const displayMove = previewMove || currentMove
   const displayClassification = previewMove ? 'Best' : currentClassification
+
+  // If we arrived from the builder with a FEN, load it automatically as a game
+  useEffect(() => {
+    if (location.state?.fromBuilderFen && !game) {
+      try {
+        const chess = new Chess(location.state.fromBuilderFen)
+        // Note: For a custom FEN without moves, we just set the initial position
+        // We'll construct a mock 'game' so analysis can run from this position
+        const targetGame = {
+          headers: { White: 'White', Black: 'Black', Result: '*' },
+          moves: [],
+          fens: [location.state.fromBuilderFen]
+        }
+        setGame(targetGame)
+        setBoardPosition(location.state.fromBuilderFen)
+        setPlyPosition(0, targetGame)
+        setActiveTab('moves')
+      } catch (e) {
+        console.error("Invalid FEN from builder", e)
+      }
+      
+      // Clear state so we don't reload it on every re-render
+      navigate(location.pathname, { replace: true })
+    }
+  }, [location.state, game, navigate])
 
   const moveRows = useMemo(() => {
     if (!game) return []
@@ -608,6 +643,12 @@ function App() {
           <span className="logo-icon">♔</span>
           <span className="logo-text">Chess Review Lab</span>
         </div>
+        
+        <div className="nav-links">
+          <Link to="/" className="nav-link active">Analyzer</Link>
+          <Link to="/builder" className="nav-link">Board Builder</Link>
+        </div>
+
         <div className="header-actions">
           <button className="icon-btn" onClick={toggleSound} title={soundOn ? 'Mute' : 'Unmute'}>
             {soundOn ? '♫' : '♪'}
@@ -696,6 +737,9 @@ function App() {
             </button>
             <button className={`tab ${activeTab === 'api' ? 'active' : ''}`} onClick={() => setActiveTab('api')}>
               Online
+            </button>
+            <button className={`tab ${activeTab === 'phases' ? 'active' : ''}`} onClick={() => setActiveTab('phases')}>
+              Phases
             </button>
           </div>
 
@@ -996,19 +1040,76 @@ function App() {
                 )}
               </div>
             )}
+
+            {activeTab === 'phases' && (
+              <div className="phases-tab">
+                {analysisStatus === 'Not analyzed' || analysisProgress < 100 || Object.keys(analysisByPly).length === 0 ? (
+                  <div className="empty-state">
+                    <p>Run analysis on a game first to see phase performance.</p>
+                  </div>
+                ) : (
+                  <GamePhaseAnalysis 
+                    game={game} 
+                    analysisByPly={analysisByPly} 
+                    onClickPly={jumpTo} 
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
     </main>
-    <footer className="app-footer">
-      <span className="footer-text">Built with ♟ by</span>
-      <a href="https://iamgs.vercel.app" target="_blank" rel="noopener noreferrer" className="footer-link">RKGS</a>
-      <span className="footer-sep">·</span>
-      <a href="https://buymeacoffee.com/rkgs" target="_blank" rel="noopener noreferrer" className="footer-link coffee-link">
-        <span className="coffee-icon">☕</span> Buy me a coffee
-      </a>
-    </footer>
     </>
+  )
+}
+
+// Wrapper for the Board Builder to include the shared header
+function BuilderPage() {
+  return (
+    <>
+      <header className="app-header">
+        <div className="logo">
+          <span className="logo-icon">♔</span>
+          <span className="logo-text">Chess Review Lab</span>
+        </div>
+        
+        <div className="nav-links">
+          <Link to="/" className="nav-link">Analyzer</Link>
+          <Link to="/builder" className="nav-link active">Board Builder</Link>
+        </div>
+
+        <div className="header-actions">
+          {/* Header actions on builder page could be empty or have other toggles */}
+        </div>
+      </header>
+      
+      <div className="main-content builder-page-content">
+        <BoardBuilder />
+      </div>
+    </>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <div className="app-shell">
+        <Routes>
+          <Route path="/" element={<Analyzer />} />
+          <Route path="/builder" element={<BuilderPage />} />
+        </Routes>
+        
+        <footer className="app-footer">
+          <span className="footer-text">Built with ♟ by</span>
+          <a href="https://iamgs.vercel.app" target="_blank" rel="noopener noreferrer" className="footer-link">RKGS</a>
+          <span className="footer-sep">·</span>
+          <a href="https://buymeacoffee.com/rkgs" target="_blank" rel="noopener noreferrer" className="footer-link coffee-link">
+            <span className="coffee-icon">☕</span> Buy me a coffee
+          </a>
+        </footer>
+      </div>
+    </BrowserRouter>
   )
 }
 
