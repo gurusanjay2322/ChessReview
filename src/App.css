@@ -513,10 +513,13 @@
   font-size: 0.85rem;
 }
 
+.coach-card.brilliant { border-left-color: var(--brilliant-color); box-shadow: inset 0 0 20px rgba(38, 198, 218, 0.08); }
+.coach-card.great { border-left-color: var(--great-color); box-shadow: inset 0 0 20px rgba(92, 107, 192, 0.05); }
 .coach-card.best { border-left-color: var(--best-color); box-shadow: inset 0 0 20px rgba(0, 212, 170, 0.04); }
 .coach-card.good { border-left-color: var(--good-color); }
 .coach-card.inaccuracy { border-left-color: var(--inaccuracy-color); }
 .coach-card.mistake { border-left-color: var(--mistake-color); }
+.coach-card.miss { border-left-color: var(--miss-color); box-shadow: inset 0 0 20px rgba(244, 143, 177, 0.04); }
 .coach-card.blunder { border-left-color: var(--blunder-color); box-shadow: inset 0 0 20px rgba(230, 57, 70, 0.06); }
 
 .coach-icon {
@@ -537,10 +540,13 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+.coach-classification.brilliant { color: var(--brilliant-color); }
+.coach-classification.great { color: var(--great-color); }
 .coach-classification.best { color: var(--best-color); }
 .coach-classification.good { color: var(--good-color); }
 .coach-classification.inaccuracy { color: var(--inaccuracy-color); }
 .coach-classification.mistake { color: var(--mistake-color); }
+.coach-classification.miss { color: var(--miss-color); }
 .coach-classification.blunder { color: var(--blunder-color); }
 
 .coach-text {
@@ -698,10 +704,13 @@
   font-weight: 700;
 }
 
+.classification-badge.brilliant { background: rgba(38,198,218,0.15); color: var(--brilliant-color); }
+.classification-badge.great { background: rgba(92,107,192,0.15); color: var(--great-color); }
 .classification-badge.best { background: rgba(0,212,170,0.15); color: var(--best-color); }
 .classification-badge.good { background: rgba(76,175,130,0.15); color: var(--good-color); }
 .classification-badge.inaccuracy { background: rgba(255,200,87,0.15); color: var(--inaccuracy-color); }
 .classification-badge.mistake { background: rgba(255,140,66,0.15); color: var(--mistake-color); }
+.classification-badge.miss { background: rgba(244,143,177,0.15); color: var(--miss-color); }
 .classification-badge.blunder { background: rgba(230,57,70,0.15); color: var(--blunder-color); }
 
 /* Stats Card */
@@ -748,10 +757,13 @@
   font-weight: 500;
 }
 
+.stat-row.brilliant { color: var(--brilliant-color); background: rgba(38,198,218,0.06); }
+.stat-row.great { color: var(--great-color); background: rgba(92,107,192,0.06); }
 .stat-row.best { color: var(--best-color); background: rgba(0,212,170,0.06); }
 .stat-row.good { color: var(--good-color); background: rgba(76,175,130,0.06); }
 .stat-row.inaccuracy { color: var(--inaccuracy-color); background: rgba(255,200,87,0.06); }
 .stat-row.mistake { color: var(--mistake-color); background: rgba(255,140,66,0.06); }
+.stat-row.miss { color: var(--miss-color); background: rgba(244,143,177,0.06); }
 .stat-row.blunder { color: var(--blunder-color); background: rgba(230,57,70,0.06); }
 
 /* ─── Move List ─── */

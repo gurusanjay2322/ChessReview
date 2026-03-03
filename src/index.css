@@ -22,10 +22,13 @@
   --accent-subtle: rgba(0, 212, 170, 0.08);
   
   /* Move classifications — unique palette */
+  --brilliant-color: #26c6da;
+  --great-color: #5c6bc0;
   --best-color: #00d4aa;
   --good-color: #4caf82;
   --inaccuracy-color: #ffc857;
   --mistake-color: #ff8c42;
+  --miss-color: #f48fb1;
   --blunder-color: #e63946;
   
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

@@ -3,7 +3,7 @@ import { Chess } from 'chess.js'
 import './App.css'
 import {
   analyzeMoveHeuristic,
-  classifyMoveByCentipawnLoss,
+  classifyMoveByAccuracy,
   formatScore,
   toUciMove,
 } from './lib/chessReview'
@@ -38,10 +38,13 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function annotationForClassification(classification) {
   const map = {
+    Brilliant: '!!',
+    Great: '!',
     Best: '★',
-    Good: '!',
+    Good: '✓',
     Inaccuracy: '?!',
     Mistake: '?',
+    Miss: 'x',
     Blunder: '??',
   }
   return map[classification] || ''
@@ -78,10 +81,13 @@ function commentForMove(san, classification, ply) {
     return `${san} is theory.`
   }
   const comments = {
+    Brilliant: `${san} is brilliant!`,
+    Great: `${san} is a great move!`,
     Best: `${san} is best.`,
     Good: `${san} is good.`,
     Inaccuracy: `${san} is an inaccuracy.`,
     Mistake: `${san} is a mistake.`,
+    Miss: `${san} is a miss.`,
     Blunder: `${san} is a blunder!`,
   }
   return comments[classification] || `${san} played.`
@@ -411,17 +417,42 @@ function App() {
         const playedMove = targetGame.moves[i]
         let result
         if (evaluator) {
-          const best = await evaluator.getBestMoveAndScore(positionFen, 13)
-          const played = await evaluator.getScoreAfterMove(positionFen, toUciMove(playedMove), 13)
-          const cpLoss = Math.max(0, best.scoreCp - played.scoreCp)
+          const depthTarget = 14;
+          const best = await evaluator.getBestMoveAndScore(positionFen, depthTarget)
+          
+          let playedScoreCp;
+          let isEngineBest = false;
+          let isMatePlayed = false;
+
+          // Check if the move is a literal match for best move (fixes horizon evaluation dropoff)
+          const playedUci = toUciMove(playedMove);
+          if (best.bestMove === playedUci) {
+            isEngineBest = true;
+            playedScoreCp = best.scoreCp;
+          } else {
+            const played = await evaluator.getScoreAfterMove(positionFen, playedUci, depthTarget)
+            playedScoreCp = played.scoreCp;
+          }
+
+          // Check if the move just played delivers checkmate on the board
+          try {
+             let chessToTestMate = new Chess(positionFen);
+             chessToTestMate.move(playedMove);
+             if (chessToTestMate.isCheckmate()) {
+                 isMatePlayed = true;
+                 playedScoreCp = 10000; // Force positive mate win explicitly
+             }
+          } catch(e) {}
+
+          const cpLoss = Math.max(0, best.scoreCp - playedScoreCp)
           const bestMoveSan = uciToSan(positionFen, best.bestMove)
           result = {
             cpLoss,
             bestMove: best.bestMove,
             bestMoveSan,
             bestScoreCp: best.scoreCp,
-            playedScoreCp: played.scoreCp,
-            classification: classifyMoveByCentipawnLoss(cpLoss),
+            playedScoreCp,
+            classification: classifyMoveByAccuracy(best.scoreCp, playedScoreCp, isMatePlayed, isEngineBest, true),
             mode: engineMode,
           }
         } else {
@@ -522,37 +553,49 @@ function App() {
 
   const stats = useMemo(() => {
     if (!game || Object.keys(analysisByPly).length === 0) return null
-    let wBest = 0, wGood = 0, wInac = 0, wMis = 0, wBlun = 0, wTotal = 0
-    let bBest = 0, bGood = 0, bInac = 0, bMis = 0, bBlun = 0, bTotal = 0
+    let wBril = 0, wGreat = 0, wBest = 0, wGood = 0, wInac = 0, wMis = 0, wMiss = 0, wBlun = 0, wTotal = 0
+    let bBril = 0, bGreat = 0, bBest = 0, bGood = 0, bInac = 0, bMis = 0, bMiss = 0, bBlun = 0, bTotal = 0
     Object.entries(analysisByPly).forEach(([plyStr, a]) => {
       const ply = Number(plyStr)
       const isWhite = ply % 2 === 0
       const c = a.classification
       if (isWhite) {
         wTotal++
-        if (c === 'Best') wBest++
+        if (c === 'Brilliant') wBril++
+        else if (c === 'Great') wGreat++
+        else if (c === 'Best') wBest++
         else if (c === 'Good') wGood++
         else if (c === 'Inaccuracy') wInac++
         else if (c === 'Mistake') wMis++
+        else if (c === 'Miss') wMiss++
         else if (c === 'Blunder') wBlun++
       } else {
         bTotal++
-        if (c === 'Best') bBest++
+        if (c === 'Brilliant') bBril++
+        else if (c === 'Great') bGreat++
+        else if (c === 'Best') bBest++
         else if (c === 'Good') bGood++
         else if (c === 'Inaccuracy') bInac++
         else if (c === 'Mistake') bMis++
+        else if (c === 'Miss') bMiss++
         else if (c === 'Blunder') bBlun++
       }
     })
-    const wScore = wBest * 1 + wGood * 0.8 + wInac * 0.5 + wMis * 0.2 + wBlun * 0
-    const bScore = bBest * 1 + bGood * 0.8 + bInac * 0.5 + bMis * 0.2 + bBlun * 0
     
-    const wAccuracy = wTotal > 0 ? Math.round((wScore / wTotal) * 100) : null
-    const bAccuracy = bTotal > 0 ? Math.round((bScore / bTotal) * 100) : null
+    // Smooth WP scaling instead of naive straight CP weight
+    const wScore = (wBril + wGreat + wBest)*1 + wGood*0.95 + wInac*0.75 + wMis*0.40 + wMiss*0.10 + wBlun*0
+    const bScore = (bBril + bGreat + bBest)*1 + bGood*0.95 + bInac*0.75 + bMis*0.40 + bMiss*0.10 + bBlun*0
+    
+    // Give minimum 10% accuracy floor (0 is practically impossible in chess if you play legal moves)
+    let wAccRaw = wTotal > 0 ? (wScore / wTotal) * 100 : null
+    let bAccRaw = bTotal > 0 ? (bScore / bTotal) * 100 : null
+    
+    const wAccuracy = wAccRaw !== null ? Math.max(10, Math.round(wAccRaw)) : null;
+    const bAccuracy = bAccRaw !== null ? Math.max(10, Math.round(bAccRaw)) : null;
 
     return { 
-      wBest, wGood, wInac, wMis, wBlun, wTotal, wAccuracy, 
-      bBest, bGood, bInac, bMis, bBlun, bTotal, bAccuracy 
+      wBril, wGreat, wBest, wGood, wInac, wMis, wMiss, wBlun, wTotal, wAccuracy, 
+      bBril, bGreat, bBest, bGood, bInac, bMis, bMiss, bBlun, bTotal, bAccuracy 
     }
   }, [game, analysisByPly])
 
@@ -689,10 +732,13 @@ function App() {
                   <div className={`coach-card ${currentClassification.toLowerCase()}`}>
                     <span className="coach-icon">
                       <span className={`class-icon ${currentClassification.toLowerCase()}`}>
-                        {currentClassification === 'Best' ? '★' :
+                        {currentClassification === 'Brilliant' ? '!!' :
+                         currentClassification === 'Great' ? '!' :
+                         currentClassification === 'Best' ? '★' :
                          currentClassification === 'Good' ? '✓' :
                          currentClassification === 'Inaccuracy' ? '?!' :
                          currentClassification === 'Mistake' ? '?' :
+                         currentClassification === 'Miss' ? 'x' :
                          currentClassification === 'Blunder' ? '??' : '•'}
                       </span>
                     </span>
@@ -774,6 +820,12 @@ function App() {
                     <div className="stats-grid">
                       <div className="stats-col">
                         <span className="stats-player">⬜ {whitePlayer}</span>
+                        <div className="stat-row brilliant">
+                          <span>Brilliant</span><span>{stats.wBril}</span>
+                        </div>
+                        <div className="stat-row great">
+                          <span>Great</span><span>{stats.wGreat}</span>
+                        </div>
                         <div className="stat-row best">
                           <span>Best</span><span>{stats.wBest}</span>
                         </div>
@@ -786,12 +838,21 @@ function App() {
                         <div className="stat-row mistake">
                           <span>Mistake</span><span>{stats.wMis}</span>
                         </div>
+                        <div className="stat-row miss">
+                          <span>Miss</span><span>{stats.wMiss}</span>
+                        </div>
                         <div className="stat-row blunder">
                           <span>Blunder</span><span>{stats.wBlun}</span>
                         </div>
                       </div>
                       <div className="stats-col">
                         <span className="stats-player">⬛ {blackPlayer}</span>
+                        <div className="stat-row brilliant">
+                          <span>Brilliant</span><span>{stats.bBril}</span>
+                        </div>
+                        <div className="stat-row great">
+                          <span>Great</span><span>{stats.bGreat}</span>
+                        </div>
                         <div className="stat-row best">
                           <span>Best</span><span>{stats.bBest}</span>
                         </div>
@@ -803,6 +864,9 @@ function App() {
                         </div>
                         <div className="stat-row mistake">
                           <span>Mistake</span><span>{stats.bMis}</span>
+                        </div>
+                        <div className="stat-row miss">
+                          <span>Miss</span><span>{stats.bMiss}</span>
                         </div>
                         <div className="stat-row blunder">
                           <span>Blunder</span><span>{stats.bBlun}</span>
